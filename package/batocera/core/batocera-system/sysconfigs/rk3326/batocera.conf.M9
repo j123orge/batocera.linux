@@ -1,0 +1,17 @@
+# M9 Handheld default values
+
+# suspend mode
+system.suspendmode=shutdown
+
+# display
+display.fb0=elida,kd35t133
+display.fb0_name="M9 Display"
+display.fb0_phy_width=640
+display.fb0_phy_height=480
+display.fb0_refresh=60
+
+# joypad
+ joypad.name="GO-Super Gamepad"
+ joypad.id=0x1100
+ joypad.amux_count=4
+ joypad.amux_channel_mapping="2 3 1 0"

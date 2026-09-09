@@ -34,7 +34,7 @@ cp "${BINARIES_DIR}/rootfs.squashfs" "${BATOCERA_BINARIES_DIR}/boot/boot/batocer
 cp "${BINARIES_DIR}/rufomaculata"    "${BATOCERA_BINARIES_DIR}/boot/boot/rufomaculata.update" || exit 1
 
 # M9 device
-cp "${BINARIES_DIR}/rk3326-m9-active.dtb"     "${BATOCERA_BINARIES_DIR}/boot/" || exit 1
+cp "${BINARIES_DIR}/rk3326-m9-linux.dtb"     "${BATOCERA_BINARIES_DIR}/boot/" || exit 1
 # R36S devices
 cp "${BINARIES_DIR}/rk3326-gameconsole-r33s.dtb" "${BATOCERA_BINARIES_DIR}/boot/" || exit 1
 cp "${BINARIES_DIR}/rk3326-gameconsole-r36s.dtb" "${BATOCERA_BINARIES_DIR}/boot/" || exit 1

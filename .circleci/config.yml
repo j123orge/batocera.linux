@@ -55,8 +55,8 @@ jobs:
               DIRECT_BUILD=1 \
               PARALLEL_BUILD=1 \
               BATCH_MODE=1 \
-              MAKE_JLEVEL=$(nproc) \
-              MAKE_LLEVEL=$(nproc)
+              MAKE_JLEVEL=2 \
+              MAKE_LLEVEL=2
 
             BUILD_EXIT=$?
             echo "$BUILD_EXIT" > /tmp/m9-build-exit-code

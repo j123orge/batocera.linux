@@ -53,8 +53,9 @@ jobs:
 
       - name: Corrigir host-xxhash
         run: |
-          python3 -c 'from pathlib import Path; p=Path("buildroot/package/xxhash/xxhash.mk"); s=p.read_text(); old="define HOST_XXHASH_BUILD_CMDS\n\t\$\(HOST_XXHASH_ENV\) \$\(MAKE\) \$\(HOST_XXHASH_OPTS\) -C \$\(@D\)\nendef"; print("Aplicando correção host-xxhash"); s=s.replace(old.replace("\\$","$"), "define HOST_XXHASH_BUILD_CMDS\n\t\$\(HOST_XXHASH_ENV\) \$\(HOSTCC_NOCCACHE\) \$\(HOST_CFLAGS\) -c \$\(@D\)/xxhash.c -o \$\(@D\)/xxhash.o\n\t\$\(HOST_XXHASH_ENV\) \$\(MAKE\) \$\(HOST_XXHASH_OPTS\) -C \$\(@D\)\nendef".replace("\\$","$")); p.write_text(s)'
+          python3 -c 'from pathlib import Path; import re; p=Path("buildroot/package/xxhash/xxhash.mk"); s=p.read_text(); pat=r"define HOST_XXHASH_BUILD_CMDS\n\t\$\(HOST_XXHASH_ENV\) \$\(MAKE\) \$\(HOST_XXHASH_OPTS\) -C \$\(@D\)\nendef"; rep="define HOST_XXHASH_BUILD_CMDS\n\t$(HOST_XXHASH_ENV) $(HOSTCC_NOCCACHE) $(HOST_CFLAGS) -c $(@D)/xxhash.c -o $(@D)/xxhash.o\n\t$(HOST_XXHASH_ENV) $(MAKE) $(HOST_XXHASH_OPTS) -C $(@D)\nendef"; ns,n=re.subn(pat,lambda m:rep,s,count=1); print("substituicoes:",n); assert n==1,"PATCH XXHASH NAO FOI APLICADO"; p.write_text(ns)'
           grep -A5 "define HOST_XXHASH_BUILD_CMDS" buildroot/package/xxhash/xxhash.mk
+          grep -q 'xxhash.c -o.*xxhash.o' buildroot/package/xxhash/xxhash.mk
 
       - name: Compilar Batocera M9
         run: |

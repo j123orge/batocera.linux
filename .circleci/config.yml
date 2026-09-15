@@ -1,0 +1,70 @@
+version: 2.1
+
+jobs:
+  build-m9:
+    docker:
+      - image: batoceralinux/batocera.linux-build:latest
+
+    resource_class: xlarge
+
+    environment:
+      DIRECT_BUILD: "1"
+      PARALLEL_BUILD: "1"
+      BATCH_MODE: "1"
+
+    steps:
+      - checkout
+
+      - run:
+          name: Inicializar Buildroot
+          command: |
+            git submodule sync --recursive
+            git submodule update --init --recursive
+
+      - run:
+          name: Mostrar ambiente
+          command: |
+            echo "CPUs: $(nproc)"
+            free -h || true
+            df -h
+            git log -1 --oneline
+
+      - run:
+          name: Compilar Batocera M9
+          no_output_timeout: 60m
+          command: |
+            make rk3326-m9-build \
+              DIRECT_BUILD=1 \
+              PARALLEL_BUILD=1 \
+              BATCH_MODE=1 \
+              MAKE_JLEVEL=$(nproc) \
+              MAKE_LLEVEL=$(nproc)
+
+      - run:
+          name: Localizar imagem
+          when: always
+          command: |
+            find output/rk3326-m9/images -maxdepth 2 -type f -ls 2>/dev/null || true
+
+      - run:
+          name: Preparar artifact
+          when: on_success
+          command: |
+            mkdir -p /tmp/m9-artifacts
+            find output/rk3326-m9/images -maxdepth 2 -type f \
+              \( -name '*.img' -o -name '*.img.gz' -o -name '*.img.xz' -o -name '*.tar.gz' \) \
+              -exec cp -v {} /tmp/m9-artifacts/ \; 2>/dev/null || true
+            ls -lh /tmp/m9-artifacts
+
+      - store_artifacts:
+          path: /tmp/m9-artifacts
+          destination: m9-images
+
+workflows:
+  build-m9:
+    jobs:
+      - build-m9:
+          filters:
+            branches:
+              only:
+                - rk3326-m9-port

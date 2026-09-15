@@ -55,6 +55,7 @@ jobs:
         run: |
           python3 scripts/fix-host-xxhash.py
           python3 scripts/fix-host-lua.py
+          python3 scripts/fix-host-libtool.py
           grep -A12 "define HOST_XXHASH_BUILD_CMDS" buildroot/package/xxhash/xxhash.mk
 
       - name: Compilar Batocera M9

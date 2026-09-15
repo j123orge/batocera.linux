@@ -15,6 +15,18 @@ jobs:
     steps:
       - checkout
 
+      # Recupera o cache mais recente de downloads
+      - restore_cache:
+          keys:
+            - v2-m9-dl-{{ .Branch }}-
+            - v2-m9-dl-
+
+      # Recupera o ccache mais recente
+      - restore_cache:
+          keys:
+            - v2-m9-ccache-{{ .Branch }}-
+            - v2-m9-ccache-
+
       - run:
           name: Inicializar Buildroot
           command: |
@@ -28,11 +40,17 @@ jobs:
             free -h || true
             df -h
             git log -1 --oneline
+            du -sh dl 2>/dev/null || true
+            du -sh buildroot-ccache 2>/dev/null || true
 
+      # Não abortamos o job imediatamente se o build falhar.
+      # Assim conseguimos salvar o cache antes.
       - run:
           name: Compilar Batocera M9
           no_output_timeout: 60m
           command: |
+            set +e
+
             make rk3326-m9-build \
               DIRECT_BUILD=1 \
               PARALLEL_BUILD=1 \
@@ -40,25 +58,54 @@ jobs:
               MAKE_JLEVEL=$(nproc) \
               MAKE_LLEVEL=$(nproc)
 
+            BUILD_EXIT=$?
+            echo "$BUILD_EXIT" > /tmp/m9-build-exit-code
+
+            echo "Build terminou com código: $BUILD_EXIT"
+            exit 0
+
+      # Salva downloads mesmo se o make original tiver falhado
+      - save_cache:
+          key: v2-m9-dl-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - dl
+
+      # Salva objetos já compilados pelo ccache
+      - save_cache:
+          key: v2-m9-ccache-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - buildroot-ccache
+
       - run:
           name: Localizar imagem
-          when: always
           command: |
             find output/rk3326-m9/images -maxdepth 2 -type f -ls 2>/dev/null || true
 
       - run:
           name: Preparar artifact
-          when: on_success
           command: |
             mkdir -p /tmp/m9-artifacts
+
             find output/rk3326-m9/images -maxdepth 2 -type f \
-              \( -name '*.img' -o -name '*.img.gz' -o -name '*.img.xz' -o -name '*.tar.gz' \) \
+              \( -name '*.img' -o \
+                 -name '*.img.gz' -o \
+                 -name '*.img.xz' -o \
+                 -name '*.tar.gz' \) \
               -exec cp -v {} /tmp/m9-artifacts/ \; 2>/dev/null || true
-            ls -lh /tmp/m9-artifacts
+
+            ls -lh /tmp/m9-artifacts || true
 
       - store_artifacts:
           path: /tmp/m9-artifacts
           destination: m9-images
+
+      # Agora sim informa ao CircleCI se o build falhou
+      - run:
+          name: Finalizar status do build
+          command: |
+            CODE=$(cat /tmp/m9-build-exit-code)
+            echo "Código final do build: $CODE"
+            exit "$CODE"
 
 workflows:
   build-m9:

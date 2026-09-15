@@ -17,8 +17,8 @@ jobs:
       DIRECT_BUILD: "1"
       PARALLEL_BUILD: "1"
       BATCH_MODE: "1"
-      MAKE_JLEVEL: "2"
-      MAKE_LLEVEL: "2"
+      MAKE_JLEVEL: "1"
+      MAKE_LLEVEL: "1"
 
     steps:
       - name: Checkout
@@ -57,8 +57,8 @@ jobs:
             DIRECT_BUILD=1 \
             PARALLEL_BUILD=1 \
             BATCH_MODE=1 \
-            MAKE_JLEVEL=2 \
-            MAKE_LLEVEL=2
+            MAKE_JLEVEL=1 \
+            MAKE_LLEVEL=1
 
       - name: Localizar imagem
         if: always()

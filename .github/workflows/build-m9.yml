@@ -53,16 +53,7 @@ jobs:
 
       - name: Corrigir host-xxhash
         run: |
-          python3 -c 'from pathlib import Path; import re; p=Path("buildroot/package/xxhash/xxhash.mk"); s=p.read_text(); pat=r"define HOST_XXHASH_BUILD_CMDS.*?endef"; rep="""define HOST_XXHASH_BUILD_CMDS
-	$(HOST_XXHASH_ENV) $(HOSTCC_NOCCACHE) $(HOST_CFLAGS) -I$(@D) -I$(@D)/cli -c $(@D)/xxhash.c -o $(@D)/xxhash.o
-	$(HOST_XXHASH_ENV) $(HOSTCC_NOCCACHE) $(HOST_CFLAGS) -I$(@D) -I$(@D)/cli -c $(@D)/cli/xxhsum.c -o $(@D)/cli/xxhsum.o
-	$(HOST_XXHASH_ENV) $(HOSTCC_NOCCACHE) $(HOST_CFLAGS) -I$(@D) -I$(@D)/cli -c $(@D)/cli/xsum_os_specific.c -o $(@D)/cli/xsum_os_specific.o
-	$(HOST_XXHASH_ENV) $(HOSTCC_NOCCACHE) $(HOST_CFLAGS) -I$(@D) -I$(@D)/cli -c $(@D)/cli/xsum_arch.c -o $(@D)/cli/xsum_arch.o
-	$(HOST_XXHASH_ENV) $(HOSTCC_NOCCACHE) $(HOST_CFLAGS) -I$(@D) -I$(@D)/cli -c $(@D)/cli/xsum_output.c -o $(@D)/cli/xsum_output.o
-	$(HOST_XXHASH_ENV) $(HOSTCC_NOCCACHE) $(HOST_CFLAGS) -I$(@D) -I$(@D)/cli -c $(@D)/cli/xsum_sanity_check.c -o $(@D)/cli/xsum_sanity_check.o
-	$(HOST_XXHASH_ENV) $(HOSTCC_NOCCACHE) $(HOST_CFLAGS) -I$(@D) -I$(@D)/cli -c $(@D)/cli/xsum_bench.c -o $(@D)/cli/xsum_bench.o
-	$(HOST_XXHASH_ENV) $(MAKE) $(HOST_XXHASH_OPTS) DISPATCH=0 -C $(@D)
-endef"""; ns,n=re.subn(pat,lambda m:rep,s,count=1,flags=re.S); print("substituicoes:",n); assert n==1; p.write_text(ns)'
+          python3 scripts/fix-host-xxhash.py
           grep -A12 "define HOST_XXHASH_BUILD_CMDS" buildroot/package/xxhash/xxhash.mk
 
       - name: Compilar Batocera M9

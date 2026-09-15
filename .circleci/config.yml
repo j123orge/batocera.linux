@@ -5,7 +5,7 @@ jobs:
     docker:
       - image: batoceralinux/batocera.linux-build:latest
 
-    resource_class: xlarge
+    resource_class: medium
 
     environment:
       DIRECT_BUILD: "1"

@@ -1,0 +1,84 @@
+name: Build Batocera M9
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - rk3326-m9-port
+    paths-ignore:
+      - '.circleci/**'
+
+jobs:
+  build-m9:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+
+    env:
+      DIRECT_BUILD: "1"
+      PARALLEL_BUILD: "1"
+      BATCH_MODE: "1"
+      MAKE_JLEVEL: "2"
+      MAKE_LLEVEL: "2"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Mostrar ambiente
+        run: |
+          echo "CPUs: $(nproc)"
+          free -h
+          df -h
+          git log -1 --oneline
+
+      - name: Cache downloads
+        uses: actions/cache@v4
+        with:
+          path: dl
+          key: m9-dl-${{ runner.os }}-${{ hashFiles('package/**', 'configs/**') }}
+          restore-keys: |
+            m9-dl-${{ runner.os }}-
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: buildroot-ccache
+          key: m9-ccache-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            m9-ccache-${{ runner.os }}-${{ github.ref_name }}-
+            m9-ccache-${{ runner.os }}-
+
+      - name: Compilar Batocera M9
+        run: |
+          make rk3326-m9-build \
+            DIRECT_BUILD=1 \
+            PARALLEL_BUILD=1 \
+            BATCH_MODE=1 \
+            MAKE_JLEVEL=2 \
+            MAKE_LLEVEL=2
+
+      - name: Localizar imagem
+        if: always()
+        run: |
+          find output/rk3326-m9/images -maxdepth 2 -type f -ls 2>/dev/null || true
+
+      - name: Preparar artefatos
+        if: success()
+        run: |
+          mkdir -p m9-artifacts
+          find output/rk3326-m9/images -maxdepth 2 -type f \
+            \( -name '*.img' -o -name '*.img.gz' -o -name '*.img.xz' -o -name '*.tar.gz' \) \
+            -exec cp -v {} m9-artifacts/ \; 2>/dev/null || true
+          ls -lh m9-artifacts
+
+      - name: Upload da imagem
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: batocera-rk3326-m9
+          path: m9-artifacts/
+          if-no-files-found: error
+          retention-days: 7

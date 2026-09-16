@@ -41,15 +41,17 @@ jobs:
           key: m9-dl-${{ runner.os }}-${{ hashFiles('package/**', 'configs/**') }}
           restore-keys: |
             m9-dl-${{ runner.os }}-
+          save-always: true
 
       - name: Cache ccache
         uses: actions/cache@v4
         with:
           path: buildroot-ccache
-          key: m9-ccache-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+          key: m9-ccache-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
           restore-keys: |
             m9-ccache-${{ runner.os }}-${{ github.ref_name }}-
             m9-ccache-${{ runner.os }}-
+          save-always: true
 
       - name: Corrigir host-xxhash
         run: |
@@ -60,13 +62,44 @@ jobs:
           grep -A12 "define HOST_XXHASH_BUILD_CMDS" buildroot/package/xxhash/xxhash.mk
 
       - name: Compilar Batocera M9
+        shell: bash
         run: |
+          set -o pipefail
           make rk3326-m9-build \
             DIRECT_BUILD=1 \
             PARALLEL_BUILD=1 \
             BATCH_MODE=1 \
             MAKE_JLEVEL=2 \
-            MAKE_LLEVEL=2
+            MAKE_LLEVEL=2 2>&1 | tee m9-build.log
+
+      - name: Resumo automatico da falha
+        if: failure()
+        shell: bash
+        run: |
+          mkdir -p m9-diagnostics
+          {
+            echo "=== M9 BUILD FAILURE SUMMARY ==="
+            echo "commit: $GITHUB_SHA"
+            echo "run: $GITHUB_RUN_ID"
+            echo
+            echo "=== ERROS IMPORTANTES ==="
+            grep -Ei "No rule to make target|No such file or directory|cannot find|undefined reference|fatal error:|collect2: error|make(\[[0-9]+\])?: \*\*\*" m9-build.log | tail -n 250 || true
+            echo
+            echo "=== ULTIMAS 300 LINHAS ==="
+            tail -n 300 m9-build.log || true
+          } > m9-diagnostics/failure-summary.txt
+
+          cp m9-build.log m9-diagnostics/ || true
+          cat m9-diagnostics/failure-summary.txt
+
+      - name: Upload diagnostico
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m9-build-failure-${{ github.run_id }}
+          path: m9-diagnostics/
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Localizar imagem
         if: always()

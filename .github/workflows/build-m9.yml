@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-m9:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 350
 
     env:
@@ -32,6 +32,9 @@ jobs:
           echo "CPUs: $(nproc)"
           free -h
           df -h
+          gcc --version | head -1
+          g++ --version | head -1
+          ldd --version | head -1
           git log -1 --oneline
 
       - name: Restaurar downloads
@@ -48,10 +51,10 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: buildroot-ccache
-          key: m9-ccache-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
+          key: m9-ccache-${{ runner.os }}-ubuntu22-${{ github.ref_name }}-${{ github.run_id }}
           restore-keys: |
-            m9-ccache-${{ runner.os }}-${{ github.ref_name }}-
-            m9-ccache-${{ runner.os }}-
+            m9-ccache-${{ runner.os }}-ubuntu22-${{ github.ref_name }}-
+            m9-ccache-${{ runner.os }}-ubuntu22-
 
       - name: Corrigir host-xxhash
         run: |
@@ -113,7 +116,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: buildroot-ccache
-          key: m9-ccache-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
+          key: m9-ccache-${{ runner.os }}-ubuntu22-${{ github.ref_name }}-${{ github.run_id }}
 
       - name: Localizar imagem
         if: always()

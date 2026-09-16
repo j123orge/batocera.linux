@@ -34,24 +34,24 @@ jobs:
           df -h
           git log -1 --oneline
 
-      - name: Cache downloads
-        uses: actions/cache@v4
+      - name: Restaurar downloads
+        id: restore-dl
+        uses: actions/cache/restore@v4
         with:
           path: dl
-          key: m9-dl-${{ runner.os }}-${{ hashFiles('package/**', 'configs/**') }}
+          key: m9-dl-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
             m9-dl-${{ runner.os }}-
-          save-always: true
 
-      - name: Cache ccache
-        uses: actions/cache@v4
+      - name: Restaurar ccache
+        id: restore-ccache
+        uses: actions/cache/restore@v4
         with:
           path: buildroot-ccache
           key: m9-ccache-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
           restore-keys: |
             m9-ccache-${{ runner.os }}-${{ github.ref_name }}-
             m9-ccache-${{ runner.os }}-
-          save-always: true
 
       - name: Corrigir host-xxhash
         run: |
@@ -100,6 +100,20 @@ jobs:
           path: m9-diagnostics/
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Salvar downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: dl
+          key: m9-dl-${{ runner.os }}-${{ github.run_id }}
+
+      - name: Salvar ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: buildroot-ccache
+          key: m9-ccache-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
 
       - name: Localizar imagem
         if: always()

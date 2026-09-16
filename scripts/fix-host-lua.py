@@ -1,27 +1,35 @@
 from pathlib import Path
 
 p = Path("buildroot/package/lua/lua.mk")
-lines = p.read_text().splitlines(keepends=True)
+s = p.read_text()
 
-found = False
+start = s.index("define HOST_LUA_BUILD_CMDS")
+end = s.index("endef", start) + len("endef")
 
-for i, line in enumerate(lines):
-    if line.strip() == "define HOST_LUA_BUILD_CMDS":
-        for j in range(i + 1, min(i + 8, len(lines))):
-            if "$(HOST_MAKE_ENV) $(MAKE)" in lines[j]:
-                if "$(MAKE) -j1" not in lines[j]:
-                    lines[j] = lines[j].replace(
-                        "$(MAKE)",
-                        "$(MAKE) -j1",
-                        1
-                    )
-                found = True
-                break
-        break
+new = r'''define HOST_LUA_BUILD_CMDS
+	cd $(@D)/src && \
+	for src in \
+		lapi.c lcode.c lctype.c ldebug.c ldo.c ldump.c \
+		lfunc.c lgc.c llex.c lmem.c lobject.c lopcodes.c \
+		lparser.c lstate.c lstring.c ltable.c ltm.c lundump.c \
+		lvm.c lzio.c lauxlib.c lbaselib.c lcorolib.c ldblib.c \
+		liolib.c lmathlib.c loadlib.c loslib.c lstrlib.c \
+		ltablib.c lutf8lib.c linit.c lua.c luac.c; \
+	do \
+		obj="$${src%.c}.o"; \
+		$(HOSTCC_NOCCACHE) $(HOST_LUA_CFLAGS) -std=gnu99 \
+			-c "$$src" -o "$$obj" || exit 1; \
+	done
+	$(HOST_MAKE_ENV) $(MAKE) -j1 \
+		CFLAGS="$(HOST_LUA_CFLAGS)" \
+		MYLDFLAGS="$(HOST_LDFLAGS)" \
+		MYLIBS="$(HOST_LUA_MYLIBS)" \
+		BUILDMODE=dynamic \
+		PKG_VERSION=$(LUA_VERSION) -C $(@D)/src all
+	sed -e "s/@VERSION@/$(LUA_VERSION)/;s/@ABI@/$(LUAINTERPRETER_ABIVER)/;s/@MYLIBS@/$(HOST_LUA_MYLIBS)/" \
+		package/lua/lua.pc.in > $(@D)/lua.pc
+endef'''
 
-if not found:
-    raise SystemExit("HOST_LUA_BUILD_CMDS nao encontrado")
+p.write_text(s[:start] + new + s[end:] + "\n")
 
-p.write_text("".join(lines))
-
-print("host-lua configurado para -j1")
+print("host-lua: compilacao explicita dos objetos ativada")

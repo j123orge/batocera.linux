@@ -13,11 +13,16 @@ if end == -1:
 
 end += len("endef")
 
-new = """define HOST_ZIC_BUILD_CMDS
-\t$(HOST_MAKE_ENV) $(MAKE) -j1 $(HOST_CONFIGURE_OPTS) -C $(@D) zic.o
-\t$(HOST_MAKE_ENV) $(MAKE) -j1 $(HOST_CONFIGURE_OPTS) -C $(@D) zic
-endef"""
+new = r'''define HOST_ZIC_BUILD_CMDS
+	$(HOST_MAKE_ENV) $(MAKE) -j1 $(HOST_CONFIGURE_OPTS) -C $(@D) tzdir.h version.h
+	cd $(@D) && \
+		$(HOSTCC_NOCCACHE) $(HOST_CFLAGS) $(HOST_CPPFLAGS) \
+		-c zic.c -o zic.o
+	cd $(@D) && \
+		$(HOSTCC_NOCCACHE) $(HOST_CFLAGS) $(HOST_LDFLAGS) \
+		-o zic zic.o
+endef'''
 
 p.write_text(s[:start] + new + s[end:])
 
-print("host-zic: zic.o sera construido antes de zic")
+print("host-zic: headers + compilacao/link explicitos ativados")

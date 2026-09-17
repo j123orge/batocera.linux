@@ -86,7 +86,7 @@ jobs:
           echo "Build exit code: $BUILD_STATUS" | tee -a m9-diagnostics/m9-build.log
           echo "build_status=$BUILD_STATUS" >> "$GITHUB_OUTPUT"
 
-          exit 0
+          exit "$BUILD_STATUS"
 
       - name: Criar diagnostico
         if: always()

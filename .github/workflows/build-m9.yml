@@ -65,43 +65,87 @@ jobs:
           grep -A12 "define HOST_XXHASH_BUILD_CMDS" buildroot/package/xxhash/xxhash.mk
 
       - name: Compilar Batocera M9
+        id: build
         shell: bash
         run: |
-          set -o pipefail
+          mkdir -p m9-diagnostics
+          touch m9-diagnostics/m9-build.log
+
+          set +e
+
           make rk3326-m9-build \
             DIRECT_BUILD=1 \
             PARALLEL_BUILD=1 \
             BATCH_MODE=1 \
             MAKE_JLEVEL=2 \
-            MAKE_LLEVEL=2 2>&1 | tee m9-build.log
+            MAKE_LLEVEL=2 \
+            2>&1 | tee -a m9-diagnostics/m9-build.log
 
-      - name: Resumo automatico da falha
-        if: failure()
+          BUILD_STATUS=${PIPESTATUS[0]}
+
+          echo "Build exit code: $BUILD_STATUS" | tee -a m9-diagnostics/m9-build.log
+          echo "build_status=$BUILD_STATUS" >> "$GITHUB_OUTPUT"
+
+          exit 0
+
+      - name: Criar diagnostico
+        if: always()
         shell: bash
         run: |
           mkdir -p m9-diagnostics
+          LOG="m9-diagnostics/m9-build.log"
+
           {
-            echo "=== M9 BUILD FAILURE SUMMARY ==="
-            echo "commit: $GITHUB_SHA"
-            echo "run: $GITHUB_RUN_ID"
+            echo "======================================"
+            echo " M9 BUILD DIAGNOSTICS"
+            echo "======================================"
             echo
-            echo "=== ERROS IMPORTANTES ==="
-            grep -Ei "No rule to make target|No such file or directory|cannot find|undefined reference|fatal error:|collect2: error|make(\[[0-9]+\])?: \*\*\*" m9-build.log | tail -n 250 || true
+            echo "Commit: $GITHUB_SHA"
+            echo "Run: $GITHUB_RUN_ID"
+            echo "Branch: $GITHUB_REF_NAME"
+            echo "Build status: ${{ steps.build.outputs.build_status }}"
             echo
-            echo "=== ULTIMAS 300 LINHAS ==="
-            tail -n 300 m9-build.log || true
+            echo "===== DISK ====="
+            df -h
+            echo
+            echo "===== MEMORY ====="
+            free -h
+            echo
+            echo "===== IMPORTANT ERRORS ====="
+
+            if [ -f "$LOG" ]; then
+              grep -Ein \
+                "error:|fatal:|fatal error|undefined reference|No rule to make target|No such file|cannot find|failed|collect2:|make.*\*\*\*" \
+                "$LOG" | tail -n 500 || true
+            else
+              echo "m9-build.log NAO EXISTE"
+            fi
+
+            echo
+            echo "===== LAST 1000 LINES ====="
+
+            if [ -f "$LOG" ]; then
+              tail -n 1000 "$LOG"
+            else
+              echo "SEM LOG DE BUILD"
+            fi
+
           } > m9-diagnostics/failure-summary.txt
 
-          cp m9-build.log m9-diagnostics/ || true
+          echo "===== DIAGNOSTIC FILES ====="
+          ls -lah m9-diagnostics/
+          echo
           cat m9-diagnostics/failure-summary.txt
 
       - name: Upload diagnostico
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: m9-build-failure-${{ github.run_id }}
-          path: m9-diagnostics/
-          if-no-files-found: warn
+          name: m9-build-diagnostics-${{ github.run_id }}
+          path: |
+            m9-diagnostics/m9-build.log
+            m9-diagnostics/failure-summary.txt
+          if-no-files-found: error
           retention-days: 7
 
       - name: Salvar downloads
